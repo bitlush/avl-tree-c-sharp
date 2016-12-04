@@ -1,0 +1,7 @@
+*.suo
+Bitlush.AvlTree.Tests/bin/
+Bitlush.AvlTree.Tests/obj/
+Bitlush.AvlTree/bin/
+Bitlush.AvlTree/obj/Debug/AvlTree.pdb
+Bitlush.AvlTree/obj/
+packages/
