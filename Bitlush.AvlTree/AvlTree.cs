@@ -425,11 +425,7 @@ namespace Bitlush
 							successor.Parent = parent;
 							successor.Left = left;
 							successor.Balance = node.Balance;
-
-							if (left != null)
-							{
-								left.Parent = successor;
-							}
+							left.Parent = successor;
 
 							if (node == _root)
 							{
@@ -479,11 +475,7 @@ namespace Bitlush
 							successor.Balance = node.Balance;
 							successor.Right = right;
 							right.Parent = successor;
-
-							if (left != null)
-							{
-								left.Parent = successor;
-							}
+							left.Parent = successor;
 
 							if (node == _root)
 							{
