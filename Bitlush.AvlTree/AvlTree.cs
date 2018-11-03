@@ -65,9 +65,15 @@ namespace Bitlush
 
 		public bool Insert(TKey key, TValue value)
 		{
+			if(_root == null) //moved up case
+			{
+				_root = new AvlNode<TKey, TValue> { Key = key, Value = value };
+				return true;
+			}
+			
 			AvlNode<TKey, TValue> node = _root;
-
-			while (node != null)
+			
+			while(true) //was: while(node != null) --- no need check each loop
 			{
 				int compare = _comparer.Compare(key, node.Key);
 
@@ -112,10 +118,6 @@ namespace Bitlush
 					return false;
 				}
 			}
-			
-			_root = new AvlNode<TKey, TValue> { Key = key, Value = value };
-
-			return true;
 		}
 
 		private void InsertBalance(AvlNode<TKey, TValue> node, int balance)
@@ -379,40 +381,40 @@ namespace Bitlush
 					{
 						if (right == null)
 						{
-							if (node == _root)
+							AvlNode<TKey, TValue> parent = node.Parent; //moved
+							if(parent==null) //was: if(node == _root) --- slower
 							{
 								_root = null;
 							}
 							else
 							{
-								AvlNode<TKey, TValue> parent = node.Parent;
-
+								//(moved up) AvlNode<TKey, TValue> parent = node.Parent;
 								if (parent.Left == node)
 								{
 									parent.Left = null;
-
 									DeleteBalance(parent, -1);
 								}
 								else
 								{
 									parent.Right = null;
-
 									DeleteBalance(parent, 1);
 								}
 							}
 						}
 						else
 						{
-							Replace(node, right);
-
-							DeleteBalance(node, 0);
+							//(was) Replace(node, right);
+							//(was) DeleteBalance(node, 0);
+							Replace_(node, right);
+							DeleteBalance(right, 0);
 						}
 					}
 					else if (right == null)
 					{
-						Replace(node, left);
-
-						DeleteBalance(node, 0);
+						//(was) Replace(node, left);
+						//(was) DeleteBalance(node, 0);
+						Replace_(node, left);
+						DeleteBalance(left, 0);
 					}
 					else
 					{
@@ -420,78 +422,80 @@ namespace Bitlush
 
 						if (successor.Left == null)
 						{
-							AvlNode<TKey, TValue> parent = node.Parent;
-
-							successor.Parent = parent;
+							//(unused) AvlNode<TKey, TValue> parent = node.Parent;
+							//(updated in Replace_()) successor.Parent = parent;
 							successor.Left = left;
 							successor.Balance = node.Balance;
 							left.Parent = successor;
 
-							if (node == _root)
-							{
-								_root = successor;
-							}
-							else
-							{
-								if (parent.Left == node)
-								{
-									parent.Left = successor;
-								}
-								else
-								{
-									parent.Right = successor;
-								}
-							}
-
+							//(was) if(node == _root)
+							//(was) {
+							//(was) 	_root = successor;
+							//(was) }
+							//(was) else
+							//(was) {
+							//(was) 	if (parent.Left == node)
+							//(was) 	{
+							//(was) 		parent.Left = successor;
+							//(was) 	}
+							//(was) 	else
+							//(was) 	{
+							//(was) 		parent.Right = successor;
+							//(was) 	}
+							//(was) }
+							Replace_(node, successor); //(new)
+							
 							DeleteBalance(successor, 1);
 						}
 						else
-						{
-							while (successor.Left != null)
+						{ //here: successor.Left != null
+							while (successor.Left != null) //as min 1 loop done
 							{
 								successor = successor.Left;
 							}
+							//here: successor is always Left child
 
-							AvlNode<TKey, TValue> parent = node.Parent;
+							//(unused) AvlNode<TKey, TValue> parent = node.Parent;
 							AvlNode<TKey, TValue> successorParent = successor.Parent;
 							AvlNode<TKey, TValue> successorRight = successor.Right;
 
-							if (successorParent.Left == successor)
-							{
+							//(always true) if (successorParent.Left == successor)
+							//{
 								successorParent.Left = successorRight;
-							}
-							else
-							{
-								successorParent.Right = successorRight;
-							}
+							//}
+							//else
+							//{
+							//	successorParent.Right = successorRight;
+							//}
 
 							if (successorRight != null)
 							{
 								successorRight.Parent = successorParent;
 							}
 
-							successor.Parent = parent;
-							successor.Left = left;
-							successor.Balance = node.Balance;
-							successor.Right = right;
-							right.Parent = successor;
-							left.Parent = successor;
-
-							if (node == _root)
-							{
-								_root = successor;
-							}
-							else
-							{
-								if (parent.Left == node)
-								{
-									parent.Left = successor;
-								}
-								else
-								{
-									parent.Right = successor;
-								}
-							}
+							//(slow) successor.Parent = parent;
+							//(slow) successor.Left = left;
+							//(slow) successor.Balance = node.Balance;
+							//(slow) successor.Right = right;
+							//(slow) right.Parent = successor;
+							//(slow) left.Parent = successor;
+							//(slow) if (node == _root)
+							//(slow) {
+							//(slow)		_root = successor;
+							//(slow) }
+							//(slow) else
+							//(slow) {
+							//(slow) 	if (parent.Left == node)
+							//(slow)		{
+							//(slow)			parent.Left = successor;
+							//(slow)		}
+							//(slow)		else
+							//(slow)		{
+							//(slow)			parent.Right = successor;
+							//(slow)		}
+							//(slow) }
+							node.Key = successor.Key;    //(fast)
+							node.Value = succesor.Value; //(fast)
 
 							DeleteBalance(successorParent, -1);
 						}
@@ -558,26 +562,44 @@ namespace Bitlush
 			}
 		}
 
+		/*(replaced by faster & usable) 
 		private static void Replace(AvlNode<TKey, TValue> target, AvlNode<TKey, TValue> source)
-		{
-			AvlNode<TKey, TValue> left = source.Left;
+		{ 
+		 	AvlNode<TKey, TValue> left = source.Left;
 			AvlNode<TKey, TValue> right = source.Right;
-
 			target.Balance = source.Balance;
 			target.Key = source.Key;
 			target.Value = source.Value;
 			target.Left = left;
 			target.Right = right;
-
 			if (left != null)
 			{
 				left.Parent = target;
 			}
-
 			if (right != null)
 			{
 				right.Parent = target;
 			}
+		}*/
+		private void Replace_(AvlNode<TKey, TValue> target, AvlNode<TKey, TValue> source)
+		{//!! changed surviving node
+			Node parent = target.Parent;
+			if(parent == null)
+			{
+				_root = source;
+			}
+			else
+			{
+				if(parent.Left == target) 
+				{
+					parent.Left = source;
+				}
+				else
+				{
+					parent.Right = source;
+				}
+			}
+			source.Parent = parent;
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()
